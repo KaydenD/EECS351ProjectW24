@@ -4,7 +4,7 @@ WFM Demodulation using a RTL-SDR
 ## Project Description
 The goal of this project is successfully demodulation multiple broadcast FM stations in real time using a cheap COTS SDR receiver called a RTL-SDR. 
 The RTL-SDR is simply our data source. It provides a convenient and well understood way of obtaining IQ data. Simply provide the RTL-SDR with a 
-center frequency f~0 and sample rate f~s, and it will provide a stream of 8 bit ADC samples with I and Q interleaved. (both I and Q are sampled at f~s so the raw output from is SDR is actually 2*f~s).
+center frequency f<sub>0</sub> and sample rate f<sub>s</sub>, and it will provide a stream of 8 bit ADC samples with I and Q interleaved. (both I and Q are sampled at f<sub>s</sub> so the raw output from is SDR is actually 2*f<sub>s</sub>).
 
 This IQ data represents a segment of the RF spectrum that we can easily process. The bandwidth of IQ data is equal to the sample rate that was commanded. For our project,
 we will be using a sample rate of 2.4Msps representing a 2.4MHz bandwidth capatured. Since commercial FM station only occupy about 200kHz of bandwidth, we should be able to demodulate, in theroy, about 12 stations at the same time.
