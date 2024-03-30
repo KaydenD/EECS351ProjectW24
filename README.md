@@ -22,7 +22,7 @@ The exact value is RC is specified by their time constant which is 75us in the U
 - `fmdemod.m` A matlab script which can demodulate the FM stations from a IQ recording.
 - `/BasebandRecordings/96e3HzBW24e5Hz.bin` An IQ recording of 96.3MHz with a 2.4MHz bandwidth. Used as the recording in previous matlab script.
 - `/Tools` Various tools used to capture or interact with the RTL-SDR. The goal is that we shouldn't need any of these tools in the end.
-
+- `/Screenshots` Various pictures of our setup, FFTs, and frequency reponse graphs. 
 ## TODO
 
 - Implement the DSP in C/C++;

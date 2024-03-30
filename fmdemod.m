@@ -64,16 +64,18 @@ audio = demod/(2*pi*(1/fs)*15000);
 b = fir1(20, 18e3/fs);
 audio = filter(b, 1, audio);
 
-%De-emphasis filter H(w) = 1/(1+j*w*tau) so apply bilinear to get discrete
-%filter
-[b,a] = bilinear(1, [75e-6 1], fs);
-audio = filter(b, a, audio);
-
 %Bring it down to the final audio sample rate
 audio = decimate(audio, 5);
 fs = fs/5;
 
+%De-emphasis filter H(w) = 1/(1+j*w*tau) so apply bilinear to get discrete
+%filter
+[b,a] = bilinear(1, [75e-6 1], fs);
+audio = filter(b, a, audio);
 figure(5);
+freqz(b, a);
+
+figure(6);
 plotFFT(audio(1:25e3), fs);
 title('FFT of audio after deemphasis');
 
