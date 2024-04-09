@@ -133,7 +133,8 @@ int main(){
 	SetConsoleCtrlHandler((PHANDLER_ROUTINE)sighandler, true);
 
 	verbose_set_sample_rate(dev, SDR_SAMPLE_RATE);
-	verbose_set_frequency(dev, 96300000U);
+	verbose_set_frequency(dev, (uint32_t)centerFreq);
+	rtlsdr_set_bias_tee(dev, 1);
 	verbose_auto_gain(dev);
 	verbose_reset_buffer(dev);
 
