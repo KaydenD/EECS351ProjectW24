@@ -1,9 +1,10 @@
 %data captured using command rtl_sdr.exe -f 96.3e6 -s 2.4e6 -n 24e6 rawiqsamples.bin
-fileID = fopen('BasebandRecordings/IQRaw.bin');
+fileID = fopen('BasebandRecordings/IQRaw2.bin');
 [rawADCIQSamples, n] = fread(fileID,'uint8'); %iq interleaved starting with i
+fclose(fileID);
 fs = 2.4e6;
-%rawADCIQSamples = rawADCIQSamples(1:16384);
-%n = 16384;
+%rawADCIQSamples = rawADCIQSamples(1:32768);
+%n = 32768;
 iq = zeros([n/2, 1]);
 for i = 1:(n/2) 
     %uint8 goes from 0 to 255. The following scales it to -1 to 1.
@@ -69,7 +70,7 @@ audio = demod;%/(2*pi*(1/fs)*15000);
 
 %We don't need anything above ~18kHz because we only care about the 
 %mono audio
-%b = fir1(2, 18e3/fs);
+%b = fir1(20, 18e3/fs);
 %audio = filter(b, 1, audio);
 
 %Bring it down to the final audio sample rate
@@ -89,7 +90,7 @@ fs = fs/5;
 %title('FFT of audio after deemphasis');
 
 %Play audio with lower volume
-sound(audio*0.2, fs);
+sound(audio*0.05, fs);
 
 
 function plotFFT(data, fs)

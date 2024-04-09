@@ -42,7 +42,7 @@ void FmDemod::startProcessing(){
 }
 
 void FmDemod::processingLoop(){
-	std::ofstream fout("audioTest.bin", std::ios::binary | std::ios::out);
+	//std::ofstream fout("audioTest.bin", std::ios::binary | std::ios::out);
 
 	std::complex<float> IQFrame[MAXFRAMESIZE];
 	uint32_t CurFrameLen = frameSize;
@@ -84,13 +84,13 @@ void FmDemod::processingLoop(){
 		CurFrameLen = decimate(5, realFrame, CurFrameLen, nLastDecimate);
 
 		for (uint32_t i = 0; i < CurFrameLen; i++) {
-			if (!audioSampleOutput.enqueue(realFrame[i]) * 0.05) {
+			if (!audioSampleOutput.enqueue(realFrame[i] * 0.05f)) {
 				std::cout << "Error in memory allocation" << std::endl;
 			}
 		}
-		fout.write((char*)realFrame, CurFrameLen * 4);
+		//fout.write((char*)realFrame, CurFrameLen * 4);
 	}
-	fout.close();
+	//fout.close();
 }
 
 /* Shift the IQ baseband by frequencyShiftHz */
