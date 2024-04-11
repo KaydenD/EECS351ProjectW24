@@ -11,6 +11,6 @@ target_include_directories(fm-demod
     ${CMAKE_CURRENT_LIST_DIR}
   )
 
-find_path(READERWRITERQUEUE_INCLUDE_DIRS "readerwriterqueue.h")
+find_path(READERWRITERQUEUE_INCLUDE_DIRS "readerwriterqueue/readerwriterqueue.h")
 
 target_include_directories(fm-demod PRIVATE ${READERWRITERQUEUE_INCLUDE_DIRS})
