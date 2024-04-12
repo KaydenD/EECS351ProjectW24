@@ -112,6 +112,8 @@ uint32_t FmDemod::calcuateFrequencyShiftLookup(std::complex<float>*& lookupvalue
 
 /* Shift the IQ baseband by frequencyShiftHz */
 void FmDemod::frequencyShift(std::complex<float>* samples, uint32_t len, uint32_t& n, std::complex<float>* lookupvalues, uint32_t freqShiftPeriod) {
+	if (freqShiftPeriod == 0)
+		return; 
 	for (uint32_t i = 0; i < len; i++) {
 		samples[i] *= lookupvalues[n++];
 		n %= freqShiftPeriod;
