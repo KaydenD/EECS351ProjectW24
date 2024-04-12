@@ -9,7 +9,9 @@
 
 
 const uint32_t SDR_SAMPLE_RATE = 2400000U;
-const uint32_t SDR_BUFFER_SIZE = 16384;
+const uint32_t SDR_BUFFER_SIZE = 512 * 2 * 100;
+const uint32_t AUDIO_BUFFER_SIZE = SDR_BUFFER_SIZE / 100;
+
 rtlsdr_dev_t* dev = nullptr;
 
 bool WINAPI sighandler(int signum) {
@@ -113,7 +115,7 @@ int main(){
 
 		parameters.nChannels = 2;
 		parameters.firstChannel = 0;
-		uint32_t bufferFrames = 256;
+		uint32_t bufferFrames = AUDIO_BUFFER_SIZE;
 		RtAudio::StreamOptions so;
 		so.flags = RTAUDIO_NONINTERLEAVED;
 		audioOutput->openStream(&parameters, NULL, RTAUDIO_FLOAT32, 48000U, &bufferFrames, &audio_callback, (void*)demodulators.back(), &so);

@@ -3,11 +3,12 @@
 #include <iostream>
 #include <thread>
 #include <fstream>
+#include <numeric>
 
 using namespace std::literals::complex_literals;
 
 static const float PI = 3.14159265f;
-static const uint32_t MAXFRAMESIZE = 16384U;
+static const uint32_t MAXFRAMESIZE = 1000000U;
 
 static const uint32_t IQSampleRate = 2400000;
 
@@ -39,8 +40,9 @@ private:
 
 	void processingLoop();
 
-	void frequencyShift(std::complex<float>* samples, const uint32_t len, uint32_t& n);
-	template <class T> void applyFIRFilter(const float* coeffs, const uint32_t order, T* samples, const uint32_t len, T* firState);
+	uint32_t calcuateFrequencyShiftLookup(std::complex<float>*& lookupvalues);
+	void frequencyShift(std::complex<float>* samples, const uint32_t len, uint32_t& n, std::complex<float>* lookupvalues, uint32_t freqShiftPeriod);
+	template <class T> void applyFIRFilter(const float* coeffs, const uint32_t order, T* samples, const uint32_t len, T* firState/*, uint32_t& firStatePtr*/);
 	template <class T> uint32_t decimate(const uint8_t ratio, T* samples, const uint32_t inLen, uint32_t& n);
 	void calculatePhase(const std::complex<float>* samples, float* phase, const uint32_t len, float& lastPhase);
 	void deEmphasis(float* samples, const uint32_t len, float& lastInput, float& lastOutput);
