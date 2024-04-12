@@ -43,8 +43,6 @@ void FmDemod::startProcessing(){
 }
 
 void FmDemod::processingLoop(){
-	//std::ofstream fout("audioTest.bin", std::ios::binary | std::ios::out);
-
 	std::complex<float>* IQFrame = new std::complex<float>[frameSize];
 	uint32_t CurFrameLen = 0;
 	float* realFrame = new float[frameSize];
@@ -55,14 +53,12 @@ void FmDemod::processingLoop(){
 	uint32_t freqShiftPeriod = calcuateFrequencyShiftLookup(shiftLookupValues);
 
 	std::complex<float> bandwidthFIRFilterState[2*bandwidthFilterOrder] = { 0 };
-	//uint32_t bandwidthFIRStatePtr = 0;
 
 	uint32_t nFirstDecimate = 0;
 
 	float lastPhase = 0;
 
 	float derivativeFIRFilterState[2*derivativeFilterOrder] = { 0 };
-	//uint32_t derivativeFIRStatePtr = 0;
 
 	uint32_t nLastDecimate = 0;
 
@@ -72,9 +68,6 @@ void FmDemod::processingLoop(){
 	while (true) {
 		if (IQSampleInput.size_approx() < frameSize)
 			continue;
-
-		auto begin = std::chrono::steady_clock::now();
-
 		for (uint32_t i = 0; i < frameSize; i++) {
 			if (!IQSampleInput.try_dequeue(IQFrame[i])) {
 				std::cout << "Not enough samples to assemble a frame" << std::endl;
@@ -83,36 +76,19 @@ void FmDemod::processingLoop(){
 		}
 		CurFrameLen = frameSize;
 
-		auto afterAddToBuffer = std::chrono::steady_clock::now();
-
 		frequencyShift(IQFrame, CurFrameLen, nFreqShift, shiftLookupValues, freqShiftPeriod);
-
-		auto afterFreqShift = std::chrono::steady_clock::now();
 
 		applyFIRFilter(bandwidthFilterCoeff, bandwidthFilterOrder, IQFrame, CurFrameLen, bandwidthFIRFilterState);
 
-		auto afterBandwidthFilter = std::chrono::steady_clock::now();
-
 		CurFrameLen = decimate(10, IQFrame, CurFrameLen, nFirstDecimate);
-
-		auto afterDecimate = std::chrono::steady_clock::now();
 
 		calculatePhase(IQFrame, realFrame, CurFrameLen, lastPhase);
 
-		auto afterPhase = std::chrono::steady_clock::now();
-
 		applyFIRFilter(derivativeFilterCoeff, derivativeFilterOrder, realFrame, CurFrameLen, derivativeFIRFilterState);
-
-		auto afterDerivative = std::chrono::steady_clock::now();
 
 		deEmphasis(realFrame, CurFrameLen, lastDeEmphInput, lastDeEmphOutput);
 
-		auto afterDeemph = std::chrono::steady_clock::now();
-
 		CurFrameLen = decimate(5, realFrame, CurFrameLen, nLastDecimate);
-
-		auto afterLastDecimate = std::chrono::steady_clock::now();
-
 
 		for (uint32_t i = 0; i < CurFrameLen; i++) {
 			if (!audioSampleOutput.enqueue(realFrame[i] * 0.05f)) {
@@ -120,28 +96,13 @@ void FmDemod::processingLoop(){
 			}
 		}
 
-		auto afterAddToOutputBuffer = std::chrono::steady_clock::now();
-
-		std::cout << "Total Time = " << std::chrono::duration_cast<std::chrono::microseconds> (afterAddToOutputBuffer - begin).count() << "[us]" << std::endl;
-		std::cout << "Add to complex buffer = " << std::chrono::duration_cast<std::chrono::microseconds> (afterAddToBuffer - begin).count() << "[us]" << std::endl;
-		std::cout << "Freq Shift = " << std::chrono::duration_cast<std::chrono::microseconds> (afterFreqShift - afterAddToBuffer).count() << "[us]" << std::endl;
-		std::cout << "Bandwidth Filter = " << std::chrono::duration_cast<std::chrono::microseconds> (afterBandwidthFilter - afterFreqShift).count() << "[us]" << std::endl;
-		std::cout << "Decimate 10 = " << std::chrono::duration_cast<std::chrono::microseconds> (afterDecimate - afterBandwidthFilter).count() << "[us]" << std::endl;
-		std::cout << "Phase Calc = " << std::chrono::duration_cast<std::chrono::microseconds> (afterPhase - afterDecimate).count() << "[us]" << std::endl;
-		std::cout << "Derivative Filter = " << std::chrono::duration_cast<std::chrono::microseconds> (afterDerivative - afterPhase).count() << "[us]" << std::endl;
-		std::cout << "Demphasis = " << std::chrono::duration_cast<std::chrono::microseconds> (afterDeemph - afterDerivative).count() << "[us]" << std::endl;
-		std::cout << "Decimate 5 = " << std::chrono::duration_cast<std::chrono::microseconds> (afterLastDecimate - afterDeemph).count() << "[us]" << std::endl;
-		std::cout << "Add to output queue = " << std::chrono::duration_cast<std::chrono::microseconds> (afterAddToOutputBuffer - afterLastDecimate).count() << "[us]" << std::endl;
-
-		//fout.write((char*)realFrame, CurFrameLen * 4);
 	}
 	delete IQFrame;
 	delete realFrame;
-	//fout.close();
 }
 
 uint32_t FmDemod::calcuateFrequencyShiftLookup(std::complex<float>*& lookupvalues) {
-	uint32_t period = std::abs(std::_Lcm(frequencyShiftHz, IQSampleRate)/std::_Gcd(frequencyShiftHz, IQSampleRate));
+	uint32_t period = (uint32_t)std::abs(std::_Lcm(frequencyShiftHz, IQSampleRate)/std::_Gcd(frequencyShiftHz, IQSampleRate));
 	lookupvalues = new std::complex<float>[period];
 	for (uint32_t n = 0; n < period; n++) {
 		lookupvalues[n] = std::exp((float)frequencyShiftHz / IQSampleRate * 2 * PI * n * -1if);
@@ -195,25 +156,6 @@ template <class T> void FmDemod::applyFIRFilter(const float* coeffs, const uint3
 	}
 	delete firStateTemp;
 }
-
-/*
-Fast FIRFilter (ends up being the same speed)
-template <class T> void FmDemod::applyFIRFilter(const float* coeffs, const uint32_t order, T* samples, const uint32_t len, T* firState, uint32_t& firStatePtr) {
-	T y = 0;
-	for (uint32_t n = 0; n < len; ++n) {
-		firState[firStatePtr] = samples[n];
-		firState[firStatePtr + order] = samples[n];
-
-		// compute inner product over kernel and double-buffer state
-		y = std::inner_product(firState + firStatePtr, firState + firStatePtr + order, coeffs, T(0));
-
-		firStatePtr = (firStatePtr == 0 ? order - 1 : firStatePtr - 1); // iterate state pointer in reverse
-
-		samples[n] = y;
-	}
-}
-*/
-
 
 template <class T> uint32_t FmDemod::decimate(const uint8_t ratio, T* samples, const uint32_t inLen, uint32_t& n) {
 	uint32_t outlen = 0;

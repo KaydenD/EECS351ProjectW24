@@ -111,7 +111,7 @@ int main(){
 		addMore += "n";
 		done = addMore.front() != 'Y' && addMore.front() != 'y';
 
-		demodulators.push_back(new FmDemod(SDR_BUFFER_SIZE / 2, 512, (int32_t)(stationFreq - centerFreq)));
+		demodulators.push_back(new FmDemod(SDR_BUFFER_SIZE / 2, AUDIO_BUFFER_SIZE * 4, (int32_t)(stationFreq - centerFreq)));
 
 		parameters.nChannels = 2;
 		parameters.firstChannel = 0;

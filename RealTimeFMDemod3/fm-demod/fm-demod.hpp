@@ -31,6 +31,14 @@ public:
 	bool addRawIQSamples(uint8_t* buf, uint32_t len);
 	bool getAudioSamples(float* buf, uint32_t len);
 	void startProcessing();
+
+	/*ReaderWriterQueue has some alignment requirements*/
+	void* operator new(size_t i) {
+		return _mm_malloc(i, 64);
+	}
+	void operator delete(void* p) {
+		_mm_free(p);
+	}
 private:
 	uint32_t frameSize;
 	int32_t frequencyShiftHz;
