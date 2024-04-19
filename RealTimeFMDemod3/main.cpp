@@ -6,11 +6,15 @@
 #include <thread>
 #include <fstream>
 #include <sstream>
+#include <chrono>
 
 
 const uint32_t SDR_SAMPLE_RATE = 2400000U;
 const uint32_t SDR_BUFFER_SIZE = 512 * 2 * 100;
 const uint32_t AUDIO_BUFFER_SIZE = SDR_BUFFER_SIZE / 100;
+
+using namespace std::chrono_literals;
+const auto IQFileReadPeriod = std::chrono::microseconds(SDR_BUFFER_SIZE * 1000000 / (SDR_SAMPLE_RATE * 2));
 
 rtlsdr_dev_t* dev = nullptr;
 
@@ -35,6 +39,27 @@ void rtlsdr_callback(uint8_t* buf, uint32_t len, void* ctx) {
 	//fout.write((char*)buf, len);
 }
 
+void readIQRecordingWorker(std::string filename, std::vector<FmDemod*>* demodulators) {
+	std::ifstream fin(filename, std::ios::binary);
+	uint8_t buf[SDR_BUFFER_SIZE];
+	while (1) {
+		if (fin.read((char*)buf, SDR_BUFFER_SIZE)) {
+			for (uint32_t i = 0; i < demodulators->size(); i++) {
+				if (!demodulators->at(i)->addRawIQSamples(buf, SDR_BUFFER_SIZE)) {
+					std::cout << "Something bad happened" << std::endl;
+					goto cleanup;
+				}
+			}
+			std::this_thread::sleep_for(IQFileReadPeriod);
+		} else {
+			fin.clear();
+			fin.seekg(0);
+		}
+	}
+cleanup:
+	fin.close();
+}
+
 int audio_callback(void* outputBuffer, void* inputBuffer, unsigned int nBufferFrames, double streamTime, RtAudioStreamStatus status, void* ctx) {
 	float* buffer = (float*)outputBuffer;
 	FmDemod* demodulator = (FmDemod*)ctx;
@@ -57,7 +82,22 @@ int main(){
 
 	std::vector<FmDemod*> demodulators;
 	std::vector<RtAudio*> outputs;
-	std::cout << "Enter desired SDR center frequency (Hz) (eg 96.3e6): "; 
+	std::string temp;
+
+	std::cout << "Use IQ Recording? y/n [n]: ";
+	std::getline(std::cin, temp);
+	temp += "n";
+	bool useRecording = temp.front() == 'Y' || temp.front() == 'y';
+	std::string filename;
+	if (useRecording) {
+		std::cout << "Enter recording filename [iq.bin]: ";
+		std::getline(std::cin, filename);
+		if (filename.empty()) {
+			filename = "iq.bin";
+		}
+	}
+
+	std::cout << "Enter desired SDR center frequency (Hz) (eg 96.3e6): ";
 	double centerFreq = 0;
 	std::cin >> centerFreq;
 	if (centerFreq > 108e6 || centerFreq < 88e6) {
@@ -90,7 +130,7 @@ int main(){
 			}
 		}
 
-		std::cout << "Please pick a output device id to play this station on [" << audioOutput->getDefaultOutputDevice() << "]: " << std::endl;
+		std::cout << "Please pick a output device id to play this station on [" << audioOutput->getDefaultOutputDevice() << "]: ";
 		RtAudio::StreamParameters parameters;
 		std::string deviceId;
 
@@ -106,10 +146,10 @@ int main(){
 		}
 
 		std::cout << "Add more channels y/n [n]: ";
-		std::string addMore;
-		std::getline(std::cin, addMore);
-		addMore += "n";
-		done = addMore.front() != 'Y' && addMore.front() != 'y';
+		temp.clear();
+		std::getline(std::cin, temp);
+		temp += "n";
+		done = temp.front() != 'Y' && temp.front() != 'y';
 
 		demodulators.push_back(new FmDemod(SDR_BUFFER_SIZE / 2, AUDIO_BUFFER_SIZE * 4, (int32_t)(stationFreq - centerFreq)));
 
@@ -122,25 +162,29 @@ int main(){
 		outputs.push_back(audioOutput);
 
 	}
+	std::thread sdrthread;
+	if(!useRecording){
+		int devIndex = verbose_device_search("0");
+		if (devIndex < 0) {
+			return 1;
+		}
+		if (rtlsdr_open(&dev, (uint32_t)devIndex) < 0) {
+			std::cout << "Failed to open SDR!" << std::endl;
+			return 1;
+		}
 
-	int devIndex = verbose_device_search("0");
-	if (devIndex < 0) {
-		return 1;
+		SetConsoleCtrlHandler((PHANDLER_ROUTINE)sighandler, true);
+
+		verbose_set_sample_rate(dev, SDR_SAMPLE_RATE);
+		verbose_set_frequency(dev, (uint32_t)centerFreq);
+		rtlsdr_set_bias_tee(dev, 1);
+		verbose_auto_gain(dev);
+		verbose_reset_buffer(dev);
+
+		sdrthread = std::thread(rtlsdr_read_async, dev, rtlsdr_callback, (void*)&demodulators, 0, SDR_BUFFER_SIZE);
+	} else {
+		sdrthread = std::thread(readIQRecordingWorker, "iq.bin", &demodulators);
 	}
-	if (rtlsdr_open(&dev, (uint32_t)devIndex) < 0) {
-		std::cout << "Failed to open SDR!" << std::endl;
-		return 1;
-	}
-
-	SetConsoleCtrlHandler((PHANDLER_ROUTINE)sighandler, true);
-
-	verbose_set_sample_rate(dev, SDR_SAMPLE_RATE);
-	verbose_set_frequency(dev, (uint32_t)centerFreq);
-	rtlsdr_set_bias_tee(dev, 1);
-	verbose_auto_gain(dev);
-	verbose_reset_buffer(dev);
-
-	std::thread sdrthread(rtlsdr_read_async, dev, rtlsdr_callback, (void*)&demodulators, 0, SDR_BUFFER_SIZE);
 
 	for (uint32_t i = 0; i < demodulators.size(); i++) {
 		demodulators[i]->startProcessing();
@@ -156,8 +200,6 @@ int main(){
 	sdrthread.join();
 
 	rtlsdr_close(dev);
-
-
 	for (uint32_t i = 0; i < outputs.size(); i++) {
 		if (outputs[i]->isStreamRunning()) {
 			outputs[i]->closeStream();
