@@ -99,6 +99,7 @@ void FmDemod::processingLoop(){
 	}
 	delete[] IQFrame;
 	delete[] realFrame;
+	delete[] shiftLookupValues;
 }
 
 uint32_t FmDemod::calcuateFrequencyShiftLookup(std::complex<float>*& lookupvalues) {
@@ -152,12 +153,6 @@ template <class T> void FmDemod::applyFIRFilter(const float* coeffs, const uint3
 		samples[i] = newValue;
 	}
 	
-	/*
-	// Afraid to use memcpy 
-	for (uint32_t i = 0; i < (order - 1); i++) {
-		firState[i] = firStateTemp[i];
-	}
-	*/
 	memcpy(firState, firStateTemp, sizeof(T) * (order - 1));
 	delete[] firStateTemp;
 }

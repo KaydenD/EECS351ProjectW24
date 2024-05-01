@@ -1,5 +1,5 @@
 %data captured using command rtl_sdr.exe -f 96.3e6 -s 2.4e6 -n 24e6 rawiqsamples.bin
-fileID = fopen('BasebandRecordings/IQRaw2.bin');
+fileID = fopen('BasebandRecordings/96e3HzBW24e5Hz.bin');
 [rawADCIQSamples, n] = fread(fileID,'uint8'); %iq interleaved starting with i
 fclose(fileID);
 fs = 2.4e6;
@@ -24,7 +24,7 @@ end
 n = (0:length(iq)-1)';
 %If center freq is 96.3MHz, then a shift of -0.8MHz gets us 95.5MHz and 0.8MHz gets us 97.1MHz
 %95.5MHz, 96.3MHz, 97.1MHz are all FM stations in my area that get good ish reception. 
-shift = -0.8e6; 
+shift = -0.8e6; %-0.8e6, 0, 0.8e6
 iq = iq .* exp(j*-shift/2.4e6*2*pi.*n);
 
 %figure(2);
